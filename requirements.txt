@@ -1,0 +1,8 @@
+pandas
+numpy
+networkx
+pyvis
+streamlit
+plotly
+scikit-learn
+pytest
