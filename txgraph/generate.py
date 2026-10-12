@@ -12,7 +12,8 @@ DAYS = 90
 
 
 class Generator:
-    def __init__(self, n_accounts=500, n_normal=6000, seed=42):
+    def __init__(self, n_accounts=500, n_normal=6000, seed=42, hard=False):
+        self.hard = hard
         self.rng = random.Random(seed)
         self.np_rng = np.random.default_rng(seed)
         accounts = [f"ACC{i:04d}" for i in range(1, n_accounts + 1)]
@@ -63,12 +64,12 @@ class Generator:
 
     def money_loop(self, size):
         ring = self.rng.sample(self.people, size)
-        amount = self.rng.uniform(20000, 45000)
+        amount = self.rng.uniform(8000, 45000) if self.hard else self.rng.uniform(20000, 45000)
         when = self.random_time(5, DAYS - 5)
         for i in range(size):
             self.add(ring[i], ring[(i + 1) % size], amount, when, "loop")
-            amount *= self.rng.uniform(0.97, 0.995)
-            when += timedelta(hours=self.rng.uniform(1, 8))
+            amount *= self.rng.uniform(0.85, 0.99) if self.hard else self.rng.uniform(0.97, 0.995)
+            when += timedelta(hours=self.rng.uniform(1, 30) if self.hard else self.rng.uniform(1, 8))
         for a in ring:
             self.label(a, "loop")
 
@@ -80,10 +81,10 @@ class Generator:
         for s in self.rng.sample(self.people, n_smurfs):
             if s in (mule, boss):
                 continue
-            amt = self.rng.uniform(45000, 49900)
+            amt = self.rng.uniform(38000, 49900) if self.hard else self.rng.uniform(45000, 49900)
             self.add(s, mule, amt, when, "smurfing")
             total += amt
-            when += timedelta(hours=self.rng.uniform(0.5, 6))
+            when += timedelta(hours=self.rng.uniform(0.5, 24) if self.hard else self.rng.uniform(0.5, 6))
         self.add(mule, boss, total * 0.95, when + timedelta(hours=2), "smurfing")
         self.label(mule, "smurfing")
 
@@ -93,8 +94,8 @@ class Generator:
         when = self.random_time(5, DAYS - 5)
         for a, b in zip(chain, chain[1:]):
             self.add(a, b, amount, when, "layering")
-            amount *= self.rng.uniform(0.95, 0.99)
-            when += timedelta(minutes=self.rng.uniform(10, 120))
+            amount *= self.rng.uniform(0.80, 0.99) if self.hard else self.rng.uniform(0.95, 0.99)
+            when += timedelta(minutes=self.rng.uniform(30, 400) if self.hard else self.rng.uniform(10, 120))
         for a in chain[1:-1]:
             self.label(a, "layering")
 
@@ -103,7 +104,7 @@ class Generator:
         when = self.random_time(5, DAYS - 5)
         for _ in range(n):
             self.add(acc, self.other_person(acc), self.rng.uniform(2000, 9000), when, "burst")
-            when += timedelta(minutes=self.rng.uniform(1, 6))
+            when += timedelta(minutes=self.rng.uniform(2, 12) if self.hard else self.rng.uniform(1, 6))
         self.label(acc, "burst")
 
     def build(self, n_each=3):
@@ -128,9 +129,10 @@ def main():
     parser.add_argument("--transactions", type=int, default=6000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", default="data")
+    parser.add_argument("--hard", action="store_true", help="smarter, harder-to-catch fraud")
     args = parser.parse_args()
 
-    df, labels = Generator(args.accounts, args.transactions, args.seed).build()
+    df, labels = Generator(args.accounts, args.transactions, args.seed, args.hard).build()
     out = Path(args.out)
     out.mkdir(exist_ok=True)
     df.to_csv(out / "transactions.csv", index=False)

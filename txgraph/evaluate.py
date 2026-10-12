@@ -1,4 +1,6 @@
 """Compare detected accounts with the answer key."""
+import sys
+
 import pandas as pd
 
 from txgraph.detectors import run_all
@@ -20,8 +22,9 @@ def score(predicted, actual):
 
 
 def main():
-    df = load_transactions("data/transactions.csv")
-    labels = pd.read_csv("data/labels.csv")
+    folder = sys.argv[1] if len(sys.argv) > 1 else "data"
+    df = load_transactions(f"{folder}/transactions.csv")
+    labels = pd.read_csv(f"{folder}/labels.csv")
     flagged = run_all(df, build_graph(df))
     r = score(flagged.keys(), labels["account"])
     print(f"Flagged: {r['found']}   Real fraud: {r['real_fraud']}   Correct: {r['correct']}")
